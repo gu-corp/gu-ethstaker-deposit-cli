@@ -32,7 +32,7 @@ HOODI = 'hoodi'
 EPHEMERY = 'ephemery'
 GNOSIS = 'gnosis'
 CHIADO = 'chiado'
-
+YOUR_NAME_CHAIN = '<YOUR_NAME_CHAIN>'
 # Mainnet setting
 MainnetSetting = BaseChainSetting(
     NETWORK_NAME=MAINNET,
@@ -79,6 +79,11 @@ ChiadoSetting = BaseChainSetting(
     MULTIPLIER=32,
     MIN_ACTIVATION_AMOUNT=1,
     MIN_DEPOSIT_AMOUNT=0.03125)
+YourNameChainSetting = BaseChainSetting(
+    NETWORK_NAME=YOUR_NAME_CHAIN,
+    GENESIS_FORK_VERSION=bytes.fromhex('<YOUR_GENESIS_FORK_VERSION>'),
+    EXIT_FORK_VERSION=bytes.fromhex('<YOUR_EXIT_FORK_VERSION>'),
+    GENESIS_VALIDATORS_ROOT=bytes.fromhex('<YOUR_GENESIS_VALIDATORS_ROOT>'))
 
 
 ALL_CHAINS: Dict[str, BaseChainSetting] = {
@@ -88,6 +93,7 @@ ALL_CHAINS: Dict[str, BaseChainSetting] = {
     EPHEMERY: EphemerySetting,
     GNOSIS: GnosisSetting,
     CHIADO: ChiadoSetting,
+    YOUR_NAME_CHAIN: YourNameChainSetting,
 }
 
 ALL_CHAIN_KEYS: tuple[str, ...] = tuple(ALL_CHAINS.keys())
