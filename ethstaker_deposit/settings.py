@@ -32,6 +32,8 @@ HOODI = 'hoodi'
 EPHEMERY = 'ephemery'
 GNOSIS = 'gnosis'
 CHIADO = 'chiado'
+POSA_DEMO = 'posa_demo'
+
 
 # Mainnet setting
 MainnetSetting = BaseChainSetting(
@@ -79,6 +81,12 @@ ChiadoSetting = BaseChainSetting(
     MULTIPLIER=32,
     MIN_ACTIVATION_AMOUNT=1,
     MIN_DEPOSIT_AMOUNT=0.03125)
+# POSA Demo setting
+PosaDemoSetting = BaseChainSetting(
+    NETWORK_NAME=POSA_DEMO,
+    GENESIS_FORK_VERSION=bytes.fromhex('00000084'),
+    EXIT_FORK_VERSION=bytes.fromhex('03000084'),
+    GENESIS_VALIDATORS_ROOT=bytes.fromhex('e1b57fd6aab26aa2a297e75cd77dbfa8ecf125821399205aa9b88469afc76045')) # WARNING: Ignore for demo.
 
 
 ALL_CHAINS: Dict[str, BaseChainSetting] = {
@@ -88,6 +96,7 @@ ALL_CHAINS: Dict[str, BaseChainSetting] = {
     EPHEMERY: EphemerySetting,
     GNOSIS: GnosisSetting,
     CHIADO: ChiadoSetting,
+    POSA_DEMO: PosaDemoSetting,
 }
 
 ALL_CHAIN_KEYS: tuple[str, ...] = tuple(ALL_CHAINS.keys())
