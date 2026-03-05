@@ -32,6 +32,7 @@ HOODI = 'hoodi'
 EPHEMERY = 'ephemery'
 GNOSIS = 'gnosis'
 CHIADO = 'chiado'
+JOC = 'joc'
 
 # Mainnet setting
 MainnetSetting = BaseChainSetting(
@@ -79,6 +80,12 @@ ChiadoSetting = BaseChainSetting(
     MULTIPLIER=32,
     MIN_ACTIVATION_AMOUNT=1,
     MIN_DEPOSIT_AMOUNT=0.03125)
+# Joc setting
+JocSetting = BaseChainSetting(
+    NETWORK_NAME=JOC,
+    GENESIS_FORK_VERSION=bytes.fromhex('00000051'),
+    EXIT_FORK_VERSION=bytes.fromhex('03000051'),
+    GENESIS_VALIDATORS_ROOT=None)
 
 
 ALL_CHAINS: Dict[str, BaseChainSetting] = {
@@ -88,6 +95,7 @@ ALL_CHAINS: Dict[str, BaseChainSetting] = {
     EPHEMERY: EphemerySetting,
     GNOSIS: GnosisSetting,
     CHIADO: ChiadoSetting,
+    JOC: JocSetting,
 }
 
 ALL_CHAIN_KEYS: tuple[str, ...] = tuple(ALL_CHAINS.keys())
