@@ -92,7 +92,7 @@ def test_existing_mnemonic_withdrawal_address() -> None:
     _, _, key_files = next(os.walk(validator_keys_folder_path))
 
     deposit_file = [key_file for key_file in key_files if key_file.startswith('deposit_data')][0]
-    with open(validator_keys_folder_path + '/' + deposit_file, 'r', encoding='utf-8') as f:
+    with open(validator_keys_folder_path + '/' + deposit_file, encoding='utf-8') as f:
         deposits_dict = json.load(f)
     for deposit in deposits_dict:
         withdrawal_credentials = bytes.fromhex(deposit['withdrawal_credentials'])
@@ -145,7 +145,7 @@ def test_existing_mnemonic_compounding_validators() -> None:
     _, _, key_files = next(os.walk(validator_keys_folder_path))
 
     deposit_file = [key_file for key_file in key_files if key_file.startswith('deposit_data')][0]
-    with open(validator_keys_folder_path + '/' + deposit_file, 'r', encoding='utf-8') as f:
+    with open(validator_keys_folder_path + '/' + deposit_file, encoding='utf-8') as f:
         deposits_dict = json.load(f)
     for deposit in deposits_dict:
         withdrawal_credentials = bytes.fromhex(deposit['withdrawal_credentials'])
@@ -203,7 +203,7 @@ def test_existing_mnemonic_compounding_custom_amount() -> None:
     _, _, key_files = next(os.walk(validator_keys_folder_path))
 
     deposit_file = [key_file for key_file in key_files if key_file.startswith('deposit_data')][0]
-    with open(validator_keys_folder_path + '/' + deposit_file, 'r', encoding='utf-8') as f:
+    with open(validator_keys_folder_path + '/' + deposit_file, encoding='utf-8') as f:
         deposits_dict = json.load(f)
     for deposit in deposits_dict:
         withdrawal_credentials = bytes.fromhex(deposit['withdrawal_credentials'])
@@ -262,7 +262,7 @@ def test_existing_mnemonic_compounding_cli_args() -> None:
     _, _, key_files = next(os.walk(validator_keys_folder_path))
 
     deposit_file = [key_file for key_file in key_files if key_file.startswith('deposit_data')][0]
-    with open(validator_keys_folder_path + '/' + deposit_file, 'r', encoding='utf-8') as f:
+    with open(validator_keys_folder_path + '/' + deposit_file, encoding='utf-8') as f:
         deposits_dict = json.load(f)
     for deposit in deposits_dict:
         withdrawal_credentials = bytes.fromhex(deposit['withdrawal_credentials'])
@@ -284,6 +284,109 @@ def test_existing_mnemonic_compounding_cli_args() -> None:
         for file_name in key_files:
             assert get_permissions(validator_keys_folder_path, file_name) == '0o400'
     # Clean up
+    clean_key_folder(my_folder_path)
+
+
+def test_existing_mnemonic_amount_overridden_without_withdrawal_address() -> None:
+    my_folder_path = os.path.join(os.getcwd(), 'TESTING_TEMP_FOLDER')
+    clean_key_folder(my_folder_path)
+    if not os.path.exists(my_folder_path):
+        os.mkdir(my_folder_path)
+
+    custom_amount = 100
+
+    runner = CliRunner()
+    inputs = [
+        'TREZOR',
+        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+        '2', '2', '5', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', '']
+    data = '\n'.join(inputs)
+    arguments = [
+        '--language', 'english',
+        '--ignore_connectivity',
+        'existing-mnemonic',
+        '--withdrawal_address', '',
+        '--folder', my_folder_path,
+        '--amount', str(custom_amount),
+        '--mnemonic_password', 'TREZOR',
+    ]
+    result = runner.invoke(cli, arguments, input=data)
+    assert result.exit_code == 0
+
+    validator_keys_folder_path = os.path.join(my_folder_path, DEFAULT_VALIDATOR_KEYS_FOLDER_NAME)
+    _, _, key_files = next(os.walk(validator_keys_folder_path))
+
+    deposit_file = [key_file for key_file in key_files if key_file.startswith('deposit_data')][0]
+    with open(validator_keys_folder_path + '/' + deposit_file, encoding='utf-8') as f:
+        deposits_dict = json.load(f)
+    for deposit in deposits_dict:
+        amount = deposit['amount']
+        assert amount == DEFAULT_ACTIVATION_AMOUNT * ETH2GWEI
+
+    all_uuid = [
+        get_uuid(validator_keys_folder_path + '/' + key_file)
+        for key_file in key_files
+        if key_file.startswith('keystore')
+    ]
+    assert len(set(all_uuid)) == 5
+
+    if os.name == 'posix':
+        for file_name in key_files:
+            assert get_permissions(validator_keys_folder_path, file_name) == '0o400'
+    clean_key_folder(my_folder_path)
+
+
+def test_existing_mnemonic_amount_overridden_with_regular_withdrawal() -> None:
+    my_folder_path = os.path.join(os.getcwd(), 'TESTING_TEMP_FOLDER')
+    clean_key_folder(my_folder_path)
+    if not os.path.exists(my_folder_path):
+        os.mkdir(my_folder_path)
+
+    custom_amount = 100
+
+    runner = CliRunner()
+    withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
+    inputs = [
+        'TREZOR',
+        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+        '2', '2', '5', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', withdrawal_address, withdrawal_address, '']
+    data = '\n'.join(inputs)
+    arguments = [
+        '--language', 'english',
+        '--ignore_connectivity',
+        'existing-mnemonic',
+        '--folder', my_folder_path,
+        '--regular-withdrawal',
+        '--amount', str(custom_amount),
+        '--mnemonic_password', 'TREZOR',
+    ]
+    result = runner.invoke(cli, arguments, input=data)
+    assert result.exit_code == 0
+
+    validator_keys_folder_path = os.path.join(my_folder_path, DEFAULT_VALIDATOR_KEYS_FOLDER_NAME)
+    _, _, key_files = next(os.walk(validator_keys_folder_path))
+
+    deposit_file = [key_file for key_file in key_files if key_file.startswith('deposit_data')][0]
+    with open(validator_keys_folder_path + '/' + deposit_file, encoding='utf-8') as f:
+        deposits_dict = json.load(f)
+    for deposit in deposits_dict:
+        withdrawal_credentials = bytes.fromhex(deposit['withdrawal_credentials'])
+        assert withdrawal_credentials == (
+            EXECUTION_ADDRESS_WITHDRAWAL_PREFIX + b'\x00' * 11 + decode_hex(withdrawal_address)
+        )
+        amount = deposit['amount']
+        assert amount == DEFAULT_ACTIVATION_AMOUNT * ETH2GWEI
+
+    all_uuid = [
+        get_uuid(validator_keys_folder_path + '/' + key_file)
+        for key_file in key_files
+        if key_file.startswith('keystore')
+    ]
+    assert len(set(all_uuid)) == 5
+
+    if os.name == 'posix':
+        for file_name in key_files:
+            assert get_permissions(validator_keys_folder_path, file_name) == '0o400'
     clean_key_folder(my_folder_path)
 
 
@@ -323,7 +426,7 @@ def test_existing_mnemonic_withdrawal_address_bad_checksum() -> None:
     _, _, key_files = next(os.walk(validator_keys_folder_path))
 
     deposit_file = [key_file for key_file in key_files if key_file.startswith('deposit_data')][0]
-    with open(validator_keys_folder_path + '/' + deposit_file, 'r', encoding='utf-8') as f:
+    with open(validator_keys_folder_path + '/' + deposit_file, encoding='utf-8') as f:
         deposits_dict = json.load(f)
     for deposit in deposits_dict:
         withdrawal_credentials = bytes.fromhex(deposit['withdrawal_credentials'])
@@ -389,22 +492,22 @@ def test_pbkdf2_new_mnemonic() -> None:
     _, _, key_files = next(os.walk(validator_keys_folder_path))
 
     deposit_file = [key_file for key_file in key_files if key_file.startswith('deposit_data')][0]
-    with open(validator_keys_folder_path + '/' + deposit_file, 'r', encoding='utf-8') as f:
+    with open(validator_keys_folder_path + '/' + deposit_file, encoding='utf-8') as f:
         pbkdf2_deposit_dict = json.load(f)[0]
 
     keystore_file = [key_file for key_file in key_files if key_file.startswith('keystore-m_')][0]
-    with open(validator_keys_folder_path + '/' + keystore_file, 'r', encoding='utf-8') as f:
+    with open(validator_keys_folder_path + '/' + keystore_file, encoding='utf-8') as f:
         pbkdf2_keystore_dict = json.load(f)
 
     validator_keys_folder_path = os.path.join(scrypt_folder_path, DEFAULT_VALIDATOR_KEYS_FOLDER_NAME)
     _, _, key_files = next(os.walk(validator_keys_folder_path))
 
     deposit_file = [key_file for key_file in key_files if key_file.startswith('deposit_data')][0]
-    with open(validator_keys_folder_path + '/' + deposit_file, 'r', encoding='utf-8') as f:
+    with open(validator_keys_folder_path + '/' + deposit_file, encoding='utf-8') as f:
         scrypt_deposit_dict = json.load(f)[0]
 
     keystore_file = [key_file for key_file in key_files if key_file.startswith('keystore-m_')][0]
-    with open(validator_keys_folder_path + '/' + keystore_file, 'r', encoding='utf-8') as f:
+    with open(validator_keys_folder_path + '/' + keystore_file, encoding='utf-8') as f:
         scrypt_keystore_dict = json.load(f)
 
     # Verify deposit files
@@ -431,7 +534,7 @@ async def test_script() -> None:
         os.mkdir(my_folder_path)
 
     if os.name == 'nt':  # Windows
-        run_script_cmd = 'sh deposit.sh'
+        run_script_cmd = 'bash deposit.sh'
     else:  # Mac or Linux
         run_script_cmd = './deposit.sh'
 
@@ -480,7 +583,7 @@ async def test_script_abbreviated_mnemonic() -> None:
         os.mkdir(my_folder_path)
 
     if os.name == 'nt':  # Windows
-        run_script_cmd = 'sh deposit.sh'
+        run_script_cmd = 'bash deposit.sh'
     else:  # Mac or Linux
         run_script_cmd = './deposit.sh'
 
