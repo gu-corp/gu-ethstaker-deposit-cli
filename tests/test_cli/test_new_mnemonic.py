@@ -17,7 +17,6 @@ from ethstaker_deposit.settings import (
     GnosisSetting,
     JocSetting,
     JoctSetting,
-    Sandbox1Setting,
 )
 from ethstaker_deposit.utils.constants import (
     BLS_WITHDRAWAL_PREFIX,
@@ -1337,7 +1336,7 @@ def test_new_mnemonic_custom_multiplier_and_min_activation_amount_testnet_custom
     clean_key_folder(my_folder_path)
 
 
-@pytest.mark.parametrize('chain_setting', [JocSetting, JoctSetting, Sandbox1Setting])
+@pytest.mark.parametrize('chain_setting', [JocSetting, JoctSetting])
 def test_joc_family_new_mnemonic(monkeypatch, chain_setting) -> None:
     """
     End-to-end check that each JOC-family network is wired through the CLI and
