@@ -4,13 +4,12 @@ from ethstaker_deposit.settings import (
     ALL_CHAINS,
     JOC,
     JOCT,
-    SANDBOX1,
     get_chain_setting,
 )
 from ethstaker_deposit.utils.validation import ALL_FORK_VERSIONS
 
 
-JOC_FAMILY = [(JOC, 81), (JOCT, 10081), (SANDBOX1, 1337)]
+JOC_FAMILY = [(JOC, 81), (JOCT, 10081)]
 
 
 def test_genesis_fork_versions_are_unique() -> None:

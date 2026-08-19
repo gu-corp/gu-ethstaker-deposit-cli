@@ -34,7 +34,6 @@ GNOSIS = 'gnosis'
 CHIADO = 'chiado'
 JOC = 'joc'
 JOCT = 'joct'
-SANDBOX1 = 'sandbox1'
 
 # Mainnet setting
 MainnetSetting = BaseChainSetting(
@@ -92,6 +91,12 @@ ChiadoSetting = BaseChainSetting(
 # Source of truth is the network's own beacon config; verify with
 # `curl <beacon>/eth/v1/config/spec`.
 #
+# Only long-lived public networks belong here. Ephemeral or internal ones
+# should go through `--devnet_chain_setting`: registering a chain reserves its
+# genesis fork version, and the devnet path then rejects that value -- so
+# registering a network that gets torn down and rebuilt would lock away the
+# one mechanism flexible enough to describe it.
+#
 # GENESIS_VALIDATORS_ROOT is unset because these beacon chains have not reached
 # genesis yet -- the root is the hash of the genesis validator registry, so it
 # cannot be known in advance. It MUST be populated from
@@ -115,12 +120,6 @@ JoctSetting = BaseChainSetting(
     GENESIS_FORK_VERSION=bytes.fromhex('00002761'),
     EXIT_FORK_VERSION=bytes.fromhex('03002761'),
     GENESIS_VALIDATORS_ROOT=None)
-# Sandbox1 setting -- 0x539 = 1337 = chain id
-Sandbox1Setting = BaseChainSetting(
-    NETWORK_NAME=SANDBOX1,
-    GENESIS_FORK_VERSION=bytes.fromhex('00000539'),
-    EXIT_FORK_VERSION=bytes.fromhex('03000539'),
-    GENESIS_VALIDATORS_ROOT=None)
 
 
 ALL_CHAINS: dict[str, BaseChainSetting] = {
@@ -132,7 +131,6 @@ ALL_CHAINS: dict[str, BaseChainSetting] = {
     CHIADO: ChiadoSetting,
     JOC: JocSetting,
     JOCT: JoctSetting,
-    SANDBOX1: Sandbox1Setting,
 }
 
 ALL_CHAIN_KEYS: tuple[str, ...] = tuple(ALL_CHAINS.keys())
