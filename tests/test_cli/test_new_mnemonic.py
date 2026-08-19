@@ -12,7 +12,13 @@ from eth_utils import decode_hex
 from ethstaker_deposit.cli import new_mnemonic
 from ethstaker_deposit.deposit import cli
 from ethstaker_deposit.key_handling.key_derivation.mnemonic import abbreviate_words
-from ethstaker_deposit.settings import ChiadoSetting, GnosisSetting
+from ethstaker_deposit.settings import (
+    ChiadoSetting,
+    GnosisSetting,
+    JocSetting,
+    JoctSetting,
+    Sandbox1Setting,
+)
 from ethstaker_deposit.utils.constants import (
     BLS_WITHDRAWAL_PREFIX,
     DEFAULT_VALIDATOR_KEYS_FOLDER_NAME,
@@ -1326,6 +1332,65 @@ def test_new_mnemonic_custom_multiplier_and_min_activation_amount_testnet_custom
     if os.name == 'posix':
         for file_name in key_files:
             assert get_permissions(validator_keys_folder_path, file_name) == '0o400'
+
+    # Clean up
+    clean_key_folder(my_folder_path)
+
+
+@pytest.mark.parametrize('chain_setting', [JocSetting, JoctSetting, Sandbox1Setting])
+def test_joc_family_new_mnemonic(monkeypatch, chain_setting) -> None:
+    """
+    End-to-end check that each JOC-family network is wired through the CLI and
+    stamps its own genesis fork version onto the deposit data. The fork version
+    is the only value binding a deposit signature to one chain, so a mix-up here
+    would produce a file that deposits successfully but never activates.
+    """
+    # monkeypatch get_mnemonic
+    def mock_get_mnemonic(language, words_path, entropy=None) -> str:
+        return "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+
+    monkeypatch.setattr(new_mnemonic, "get_mnemonic", mock_get_mnemonic)
+
+    # Prepare folder
+    my_folder_path = os.path.join(os.getcwd(), 'TESTING_TEMP_FOLDER')
+    clean_key_folder(my_folder_path)
+    if not os.path.exists(my_folder_path):
+        os.mkdir(my_folder_path)
+
+    runner = CliRunner()
+    withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
+    inputs = ['english', '1', 'MyPasswordIs', 'MyPasswordIs', withdrawal_address, withdrawal_address, '',
+              'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', '']
+    data = '\n'.join(inputs)
+    arguments = [
+        '--language', 'english',
+        '--ignore_connectivity',
+        'new-mnemonic',
+        '--chain', chain_setting.NETWORK_NAME,
+        '--folder', my_folder_path,
+    ]
+    result = runner.invoke(cli, arguments, input=data)
+    assert result.exit_code == 0
+
+    # Check files
+    validator_keys_folder_path = os.path.join(my_folder_path, DEFAULT_VALIDATOR_KEYS_FOLDER_NAME)
+    _, _, key_files = next(os.walk(validator_keys_folder_path))
+
+    deposit_file = [key_file for key_file in key_files if key_file.startswith('deposit_data')][0]
+    with open(validator_keys_folder_path + '/' + deposit_file, encoding='utf-8') as f:
+        deposits_dict = json.load(f)
+    for deposit in deposits_dict:
+        assert deposit['fork_version'] == chain_setting.GENESIS_FORK_VERSION.hex()
+        assert deposit['network_name'] == chain_setting.NETWORK_NAME
+        # No Gnosis-style multiplier: 32 whole native tokens.
+        assert deposit['amount'] == 32 * ETH2GWEI
+        # Regular withdrawal (0x01) is the default -- these networks have not
+        # activated Electra, so compounding (0x02) credentials would not be
+        # processed by the beacon chain.
+        withdrawal_credentials = bytes.fromhex(deposit['withdrawal_credentials'])
+        assert withdrawal_credentials == (
+            EXECUTION_ADDRESS_WITHDRAWAL_PREFIX + b'\x00' * 11 + decode_hex(withdrawal_address)
+        )
 
     # Clean up
     clean_key_folder(my_folder_path)
