@@ -1130,7 +1130,7 @@ def test_joc_family_new_mnemonic(monkeypatch, chain_setting) -> None:
 
     runner = CliRunner()
     withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
-    inputs = ['english', '1', 'MyPasswordIs', 'MyPasswordIs', withdrawal_address, withdrawal_address, '',
+    inputs = ['english', '1', 'MyPasswordIs', 'MyPasswordIs', withdrawal_address, withdrawal_address, 'no',
               'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', '']
     data = '\n'.join(inputs)
     arguments = [
