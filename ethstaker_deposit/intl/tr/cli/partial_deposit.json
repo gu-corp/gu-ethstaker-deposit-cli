@@ -1,0 +1,46 @@
+{
+  "partial_deposit": {
+    "arg_partial_deposit": {
+      "help": "Sağlanan doğrulayıcı keystore'u tarafından imzalanacak, en az 1 ETH tutarında kısmi para yatırma işlemi oluşturun. Bu işlem sağlanan doğrulayıcının bakiyesine ekleme yapar veya yeni bir doğrulayıcının oluşturulmasını başlatır."
+    },
+    "arg_partial_deposit_amount": {
+      "help": "Bu doğrulayıcıya ETH cinsinden yatırılacak miktar. En az 1 ETH olmalı ve 1 gwei'den daha yüksek hassasiyete sahip olamaz. Varsayılan değer 32 ETH."
+    },
+    "arg_partial_deposit_keystore": {
+      "help": "İmzalamak ve para yatırmak istediğiniz doğrulayıcıyla ilişkili keystore dosyası.",
+      "prompt": "Lütfen keystore dosyanızın konumunu girin."
+    },
+    "arg_partial_deposit_keystore_password": {
+      "help": "Sağlanan keystore dosyasını şifrelemek için kullanılan parola. Not: Bu, anımsatma parolanız değildir. (Bu bağı kullanmamanız ve CLI programının parolanızı sormasını beklemeniz önerilir; aksi takdirde parola kabuk geçmişinizde görünür.)",
+      "prompt": "Sağlanan keystore dosyasını şifrelemek için kullanılan parolayı girin.",
+      "mismatch": "Hata: Sağlanan keystore parolası bu keystore dosyasının şifresini çözemez. Doğru parolaya sahip olduğunuzdan emin olun ve tekrar deneyin."
+    },
+    "arg_partial_deposit_output_folder": {
+      "help": "Kısmi para yatırma işleminin kaydedileceği klasör yolu. Varsayılan olarak `./partial_deposits` kullanılır."
+    },
+    "arg_withdrawal_address": {
+      "help": "Doğrulayıcının para çekme adresi.",
+      "confirm": "Onaylamak için para çekme adresini tekrar girin.",
+      "prompt": "Lütfen para çekme adresini girin.",
+      "mismatch": "Hata: girilen iki adres eşleşmiyor. Lütfen tekrar yazın."
+    },
+    "arg_compounding": {
+      "help": "Varsayılan olarak, 2048 ETH maksimum etkin bakiye ile Type 2 (0x02) bileşik doğrulayıcılar oluşturur. \"--regular_withdrawal\" seçilirse 32 ETH maksimum etkin bakiye ile normal para çekme Type 1 (0x01) doğrulayıcılar oluşturur.",
+      "prompt": "2048 ETH maksimum etkin bakiye ile Type 2 (0x02) bileşik doğrulayıcılar oluşturmak istiyorsanız \"yes\" yazın veya varsayılanı kabul edin. 32 ETH maksimum etkin bakiye ile normal para çekme Type 1 (0x01) doğrulayıcılar istiyorsanız \"no\" yazın."
+    },
+    "msg_partial_deposit_creation": "\nKısmi para yatırma işleminiz oluşturuluyor...",
+    "msg_verify_partial_deposit": "\nKısmi para yatırma işleminiz doğrulanıyor...",
+    "err_verify_partial_deposit": "\nKısmi para yatırma işleminiz doğrulanırken bir sorun oluştu.\nLütfen tekrar deneyin",
+    "msg_creation_success": "\nBaşarılı!\nKısmi para yatırma dosyanızın bulunduğu yer: ",
+    "msg_pause": "\n\nDevam etmek için bir tuşa basın.",
+    "dynamic": {
+      "arg_partial_deposit_chain": {
+        "help": "Doğrulayıcınızın çalıştığı Ethereum PoS zincirinin adı. Varsayılan \"mainnet\"tir.",
+        "prompt": "Lütfen (mainnet veya testnet) ağ/zincir adını seçin"
+      },
+      "arg_devnet_chain_setting": {
+        "help": "[DEVNET ONLY] Belirli bir GENESIS_FORK_VERSION değeri ayarlayın. Bu, şu anahtarlara sahip bir nesne içeren JSON dizesi olmalıdır: network_name, genesis_fork_version, exit_fork_version, genesis_validator_root, multiplier, min_activation_amount ve min_deposit_amount. settings.py dosyasında bulabileceğiniz yapıya benzer olmalıdır. Bu, seçilen zinciri geçersiz kılar."
+      }
+    }
+  }
+}

@@ -32,6 +32,7 @@ from ethstaker_deposit.utils.ssz import (
     VoluntaryExit,
     compute_bls_to_execution_change_domain,
     compute_bls_to_execution_change_keystore_domain,
+    compute_builder_deposit_domain,
     compute_deposit_domain,
     compute_signing_root,
     compute_voluntary_exit_domain,
@@ -41,6 +42,8 @@ from ethstaker_deposit.credentials import (
 )
 from ethstaker_deposit.utils.constants import (
     BLS_WITHDRAWAL_PREFIX,
+    BUILDER_MIN_DEPOSIT,
+    BUILDER_WITHDRAWAL_PREFIX,
     COMPOUNDING_WITHDRAWAL_PREFIX,
     ETH2GWEI,
     EXECUTION_ADDRESS_WITHDRAWAL_PREFIX,
@@ -75,6 +78,12 @@ def verify_deposit_data_json(filefolder: str, credentials: Sequence[Credential],
     with open(filefolder, encoding='utf-8') as f:
         deposit_json = json.load(f)
 
+    if len(deposit_json) != len(credentials):
+        raise ValidationError(
+            f"Number of deposits ({len(deposit_json)}) doesn't match "
+            f"the number of credentials ({len(credentials)})."
+        )
+
     with click.progressbar(length=len(deposit_json),
                            label=load_text(['msg_deposit_verification']),
                            show_percent=False, show_pos=True) as bar:
@@ -89,7 +98,7 @@ def verify_deposit_data_json(filefolder: str, credentials: Sequence[Credential],
 
 
 def validate_deposit(deposit_data_dict: dict[str, Any], chain_setting: BaseChainSetting,
-                     credential: Credential = None) -> bool:
+                     credential: Credential | None = None) -> bool:
     '''
     Checks whether a deposit is valid based on the staking deposit rules.
     https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#deposits
@@ -110,12 +119,7 @@ def validate_deposit(deposit_data_dict: dict[str, Any], chain_setting: BaseChain
     # Verify withdrawal credential
     if len(withdrawal_credentials) != 32:
         return False
-    if withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX:
-        if credential and withdrawal_credentials[:1] != credential.withdrawal_prefix:
-            return False
-        if withdrawal_credentials[1:] != SHA256(credential.withdrawal_pk)[1:]:
-            return False
-    elif (
+    if (
         withdrawal_credentials[:1] == EXECUTION_ADDRESS_WITHDRAWAL_PREFIX
         or withdrawal_credentials[:1] == COMPOUNDING_WITHDRAWAL_PREFIX
     ):
@@ -156,6 +160,95 @@ def validate_deposit(deposit_data_dict: dict[str, Any], chain_setting: BaseChain
         signature=signature,
     )
     return signed_deposit.hash_tree_root == deposit_message_root
+
+
+def verify_builder_deposit_data_json(filefolder: str, credentials: Sequence[Credential]) -> bool:
+    """
+    Validate every builder deposit found in the builder_deposit_data JSON file folder.
+    """
+    all_valid_deposits = True
+    with open(filefolder, encoding='utf-8') as f:
+        deposit_json = json.load(f)
+
+    if len(deposit_json) != len(credentials):
+        raise ValidationError(
+            f"Number of builder deposits ({len(deposit_json)}) doesn't match "
+            f"the number of credentials ({len(credentials)})."
+        )
+
+    with click.progressbar(length=len(deposit_json),
+                           label=load_text(['msg_deposit_verification']),
+                           show_percent=False, show_pos=True) as bar:
+
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            for valid_deposit in executor.map(validate_builder_deposit, deposit_json, credentials):
+                all_valid_deposits &= valid_deposit
+                bar.update(1)
+
+    return all_valid_deposits
+
+
+def validate_builder_deposit(builder_deposit_data_dict: dict[str, Any], credential: Credential | None = None) -> bool:
+    '''
+    Checks whether a builder deposit is valid, per EIP-8282:
+    https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/beacon-chain.md
+    Unlike validator deposits, there is no maximum amount.
+    deposit_message_root and deposit_data_root are used purely as file-integrity checks
+    '''
+    pubkey = BLSPubkey(bytes.fromhex(builder_deposit_data_dict['pubkey']))
+    withdrawal_credentials = bytes.fromhex(builder_deposit_data_dict['withdrawal_credentials'])
+    amount = builder_deposit_data_dict['amount']
+    signature = BLSSignature(bytes.fromhex(builder_deposit_data_dict['signature']))
+    deposit_message_root = bytes.fromhex(builder_deposit_data_dict['deposit_message_root'])
+    deposit_data_root = bytes.fromhex(builder_deposit_data_dict['deposit_data_root'])
+    fork_version = bytes.fromhex(builder_deposit_data_dict['fork_version'])
+
+    # Verify pubkey
+    if len(pubkey) != 48:
+        return False
+    if credential and pubkey != credential.signing_pk:
+        return False
+
+    # Verify withdrawal credential: builders always use the execution-address form
+    if len(withdrawal_credentials) != 32:
+        return False
+    if withdrawal_credentials[:1] != BUILDER_WITHDRAWAL_PREFIX:
+        return False
+    if credential and withdrawal_credentials[:1] != credential.withdrawal_prefix:
+        return False
+    if withdrawal_credentials[1:12] != b'\x00' * 11:
+        return False
+    if credential and credential.withdrawal_address is None:
+        return False
+    if credential and withdrawal_credentials[12:] != credential.withdrawal_address:
+        return False
+
+    # Verify deposit amount; no upper bound for builders
+    if amount < BUILDER_MIN_DEPOSIT:
+        return False
+
+    # Verify deposit signature && pubkey
+    builder_deposit_message = DepositMessage(  # type: ignore[no-untyped-call]
+        pubkey=pubkey,
+        withdrawal_credentials=withdrawal_credentials,
+        amount=amount,
+    )
+
+    if builder_deposit_message.hash_tree_root != deposit_message_root:
+        return False
+
+    domain = compute_builder_deposit_domain(fork_version)
+    signing_root = compute_signing_root(builder_deposit_message, domain)
+    if not bls.Verify(pubkey, signing_root, signature):
+        return False
+
+    builder_deposit_data = DepositData(  # type: ignore[no-untyped-call]
+        pubkey=pubkey,
+        withdrawal_credentials=withdrawal_credentials,
+        amount=amount,
+        signature=signature,
+    )
+    return builder_deposit_data.hash_tree_root == deposit_data_root
 
 
 def validate_password_strength(password: str) -> str:
@@ -224,7 +317,7 @@ def validate_deposit_amount(amount: str, **kwargs: dict[str, Any]) -> int:
     Verifies that `amount` is a valid gwei denomination and 1 ether <= amount <= MAX_DEPOSIT_AMOUNT gwei
     Amount is expected to be in ether and the returned value will be converted to gwei and represented as an int
     Optional `kwargs`:
-    - `params` (dict): can include `chain` (e.g., 'mainnet') and/or `devnet_chain_setting` to override
+    - `params` (dict): can include the resolved `chain_setting` to override
     default chain settings.
     '''
     try:
@@ -232,12 +325,11 @@ def validate_deposit_amount(amount: str, **kwargs: dict[str, Any]) -> int:
         amount_gwei = decimal_ether * Decimal(ETH2GWEI)
 
         params = kwargs.get('params', {})
-        chain = params.get('chain', 'mainnet')
-        devnet_chain_setting = params.get('devnet_chain_setting', None)
-        if devnet_chain_setting is not None:
-            chain_setting = devnet_chain_setting
-        else:
-            chain_setting = get_chain_setting(chain)
+        chain_setting = params.get('chain_setting')
+        if chain_setting is None:
+            chain = params.get('chain', 'mainnet')
+            devnet_chain_setting = params.get('devnet_chain_setting', None)
+            chain_setting = devnet_chain_setting or get_chain_setting(chain)
         min_amount = chain_setting.MIN_DEPOSIT_AMOUNT
 
         if amount_gwei % 1 != 0:
@@ -251,6 +343,27 @@ def validate_deposit_amount(amount: str, **kwargs: dict[str, Any]) -> int:
 
         if amount_gwei > MAX_DEPOSIT_AMOUNT / chain_setting.MULTIPLIER:
             raise ValidationError(load_text(['err_max_deposit']))
+
+        return int(amount_gwei)
+    except InvalidOperation:
+        raise ValidationError(load_text(['err_invalid_amount']))
+
+
+def validate_builder_deposit_amount(amount: str, **kwargs: dict[str, Any]) -> int:
+    '''
+    Verifies that `amount` is a valid gwei denomination and amount >= BUILDER_MIN_DEPOSIT gwei.
+    Amount is expected to be in ether and the returned value will be converted to gwei and
+    represented as an int. There is no upper bound for builders
+    '''
+    try:
+        decimal_ether = Decimal(amount)
+        amount_gwei = decimal_ether * Decimal(ETH2GWEI)
+
+        if amount_gwei % 1 != 0:
+            raise ValidationError(load_text(['err_not_gwei_denomination']))
+
+        if amount_gwei < BUILDER_MIN_DEPOSIT:
+            raise ValidationError(load_text(['err_min_deposit']))
 
         return int(amount_gwei)
     except InvalidOperation:
@@ -495,8 +608,12 @@ def validate_devnet_chain_setting(ctx: click.Context, param: Any, value: str | N
     if value is None:
         return None
 
-    # Trimming to protect against unnecessaryly large JSON payload, see https://docs.python.org/3/library/json.html
-    trimmed_value = value[:400]
+    # Protect against unnecessarily large JSON payloads, see https://docs.python.org/3/library/json.html
+    if len(value) > 400:
+        raise ValidationError(
+            load_text(['err_devnet_chain_setting_too_large'], func='validate_devnet_chain_setting_json') + '\n'
+        )
+    trimmed_value = value
 
     if validate_devnet_chain_setting_json(trimmed_value):
         click.echo(f'\n{load_text(["arg_devnet_chain_setting_warning"])}\n')
@@ -531,22 +648,38 @@ def validate_devnet_chain_setting_json(json_value: str) -> bool:
         if not all_keys:
             raise ValidationError(load_text(['err_devnet_chain_setting_missing_keys']) + '\n')
 
-        genesis_fork_version = decode_hex(devnet_chain_setting_dict['genesis_fork_version'])
+        network_name = devnet_chain_setting_dict['network_name']
+        if not isinstance(network_name, str) or not network_name.strip():
+            raise ValidationError(
+                load_text(['err_devnet_chain_setting_invalid_network_name'],
+                          func='validate_devnet_chain_setting_json') + '\n'
+            )
+
+        genesis_fork_version = _decode_fixed_hex(
+            devnet_chain_setting_dict['genesis_fork_version'], 4,
+            'invalid_genesis_fork_version',
+        )
         if genesis_fork_version in ALL_FORK_VERSIONS:
             known_network = ALL_FORK_VERSIONS[genesis_fork_version]
             raise ValidationError(load_text(['err_devnet_known_genesis_fork_version']) + f' ({known_network})' + '\n')
 
-        if len(devnet_chain_setting_dict) not in (3, 4, 5, 6, 7):
-            raise ValidationError(load_text(['err_devnet_chain_setting_key_length']) + '\n')
+        _decode_fixed_hex(
+            devnet_chain_setting_dict['exit_fork_version'], 4,
+            'invalid_exit_fork_version',
+        )
+
+        if 'genesis_validator_root' in devnet_chain_setting_dict:
+            _decode_fixed_hex(
+                devnet_chain_setting_dict['genesis_validator_root'], 32,
+                'invalid_genesis_validator_root',
+            )
 
         if 'multiplier' in devnet_chain_setting_dict:
-            multiplier = int(devnet_chain_setting_dict['multiplier'])
+            _validate_positive_integer(devnet_chain_setting_dict['multiplier'], 'multiplier')
 
-            if multiplier == 0:
-                raise ValidationError(load_text(['err_devnet_chain_setting_zero_multiplier']) + '\n')
-
-            if multiplier < 0:
-                raise ValidationError(load_text(['err_devnet_chain_setting_negative_multiplier']) + '\n')
+        for key in ('min_activation_amount', 'min_deposit_amount'):
+            if key in devnet_chain_setting_dict:
+                _validate_positive_number(devnet_chain_setting_dict[key], key)
 
         allowed_keys = set(required_keys + optional_keys)
         unknown_keys = set(devnet_chain_setting_dict) - allowed_keys
@@ -557,4 +690,75 @@ def validate_devnet_chain_setting_json(json_value: str) -> bool:
     except json.JSONDecodeError:
         raise ValidationError(load_text(['err_devnet_chain_setting_invalid_json']) + '\n')
 
-        return False
+
+def _decode_fixed_hex(value: Any, size: int, message_key: str) -> bytes:
+    if not isinstance(value, str):
+        raise ValidationError(
+            load_text(['dynamic', message_key], func='validate_devnet_chain_setting_json') + '\n'
+        )
+    try:
+        decoded = decode_hex(value)
+    except (TypeError, ValueError):
+        raise ValidationError(
+            load_text(['dynamic', message_key], func='validate_devnet_chain_setting_json') + '\n'
+        )
+    if len(decoded) != size:
+        raise ValidationError(
+            load_text(['dynamic', message_key], func='validate_devnet_chain_setting_json') + '\n'
+        )
+    return decoded
+
+
+def _validate_positive_integer(value: Any, field_name: str) -> int:
+    if isinstance(value, bool):
+        raise ValidationError(
+            load_text(['err_devnet_chain_setting_invalid_number'],
+                      func='validate_devnet_chain_setting_json') + f' ({field_name})\n'
+        )
+    try:
+        integer = int(value)
+    except (TypeError, ValueError):
+        raise ValidationError(
+            load_text(['err_devnet_chain_setting_invalid_number'],
+                      func='validate_devnet_chain_setting_json') + f' ({field_name})\n'
+        )
+    if isinstance(value, float) and not value.is_integer():
+        raise ValidationError(
+            load_text(['err_devnet_chain_setting_invalid_number'],
+                      func='validate_devnet_chain_setting_json') + f' ({field_name})\n'
+        )
+    if integer <= 0:
+        raise ValidationError(
+            load_text(['err_devnet_chain_setting_positive_number'],
+                      func='validate_devnet_chain_setting_json') + f' ({field_name})\n'
+        )
+    return integer
+
+
+def _validate_positive_number(value: Any, field_name: str) -> Decimal:
+    if isinstance(value, bool):
+        raise ValidationError(
+            load_text(['err_devnet_chain_setting_invalid_number'],
+                      func='validate_devnet_chain_setting_json') + f' ({field_name})\n'
+        )
+    try:
+        number = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        raise ValidationError(
+            load_text(['err_devnet_chain_setting_invalid_number'],
+                      func='validate_devnet_chain_setting_json') + f' ({field_name})\n'
+        )
+    if not number.is_finite() or number <= 0:
+        raise ValidationError(
+            load_text(['err_devnet_chain_setting_positive_number'],
+                      func='validate_devnet_chain_setting_json') + f' ({field_name})\n'
+        )
+    return number
+
+
+def validate_genesis_validators_root(chain_setting: BaseChainSetting) -> None:
+    if chain_setting.GENESIS_VALIDATORS_ROOT is None:
+        raise ValidationError(load_text(
+            ['missing_genesis_validators_root'],
+            func='validate_genesis_validators_root',
+        ))

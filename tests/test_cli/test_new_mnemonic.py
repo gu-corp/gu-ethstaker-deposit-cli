@@ -1,4 +1,3 @@
-import asyncio
 import json
 import os
 
@@ -19,15 +18,14 @@ from ethstaker_deposit.settings import (
     JoctSetting,
 )
 from ethstaker_deposit.utils.constants import (
-    BLS_WITHDRAWAL_PREFIX,
     DEFAULT_VALIDATOR_KEYS_FOLDER_NAME,
     EXECUTION_ADDRESS_WITHDRAWAL_PREFIX,
     COMPOUNDING_WITHDRAWAL_PREFIX,
     DEFAULT_ACTIVATION_AMOUNT,
     ETH2GWEI,
 )
-from ethstaker_deposit.utils.intl import load_text
-from .helpers import clean_key_folder, get_permissions, get_uuid
+from .helpers import clean_key_folder
+from tests.shared_helpers import get_permissions, get_uuid
 
 
 @pytest.fixture(autouse=True)
@@ -36,52 +34,6 @@ def check_async(request):
         os.environ['IS_ASYNC_TEST'] = '1'
     else:
         os.environ['IS_ASYNC_TEST'] = '0'
-
-
-def test_new_mnemonic_bls_withdrawal(monkeypatch) -> None:
-    # monkeypatch get_mnemonic
-    def mock_get_mnemonic(language, words_path, entropy=None) -> str:
-        return "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-
-    monkeypatch.setattr(new_mnemonic, "get_mnemonic", mock_get_mnemonic)
-
-    # Prepare folder
-    my_folder_path = os.path.join(os.getcwd(), 'TESTING_TEMP_FOLDER')
-    clean_key_folder(my_folder_path)
-    if not os.path.exists(my_folder_path):
-        os.mkdir(my_folder_path)
-
-    runner = CliRunner()
-    inputs = ['english', 'english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs',
-              'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', '']
-    data = '\n'.join(inputs)
-    arguments = [
-        '--ignore_connectivity',
-        'new-mnemonic',
-        '--withdrawal_address', '',
-        '--folder', my_folder_path,
-    ]
-    result = runner.invoke(cli, arguments, input=data)
-    assert result.exit_code == 0
-
-    # Check files
-    validator_keys_folder_path = os.path.join(my_folder_path, DEFAULT_VALIDATOR_KEYS_FOLDER_NAME)
-    _, _, key_files = next(os.walk(validator_keys_folder_path))
-
-    all_uuid = [
-        get_uuid(validator_keys_folder_path + '/' + key_file)
-        for key_file in key_files
-        if key_file.startswith('keystore')
-    ]
-    assert len(set(all_uuid)) == 1
-
-    # Verify file permissions
-    if os.name == 'posix':
-        for file_name in key_files:
-            assert get_permissions(validator_keys_folder_path, file_name) == '0o400'
-
-    # Clean up
-    clean_key_folder(my_folder_path)
 
 
 def test_new_mnemonic_withdrawal_address(monkeypatch) -> None:
@@ -99,7 +51,7 @@ def test_new_mnemonic_withdrawal_address(monkeypatch) -> None:
 
     runner = CliRunner()
     withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
-    inputs = ['english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', withdrawal_address, withdrawal_address, '',
+    inputs = ['english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', withdrawal_address, withdrawal_address, 'no',
               'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', '']
     data = '\n'.join(inputs)
     arguments = [
@@ -158,7 +110,7 @@ def test_new_mnemonic_compounding_validators(monkeypatch) -> None:
     runner = CliRunner()
     withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
     inputs = ['english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', withdrawal_address, withdrawal_address,
-              'yes', '',
+              '', '',
               'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', '']
     data = '\n'.join(inputs)
     arguments = [
@@ -583,7 +535,7 @@ def test_new_mnemonic_withdrawal_address_bad_checksum(monkeypatch) -> None:
     correct_withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
 
     inputs = ['english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs',
-              wrong_withdrawal_address, correct_withdrawal_address, correct_withdrawal_address, '',
+              wrong_withdrawal_address, correct_withdrawal_address, correct_withdrawal_address, 'no',
               'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', '']
     data = '\n'.join(inputs)
     arguments = [
@@ -639,7 +591,7 @@ def test_new_mnemonic_withdrawal_address_parameter(monkeypatch) -> None:
 
     runner = CliRunner()
     withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
-    inputs = [withdrawal_address, 'english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', '',
+    inputs = [withdrawal_address, 'english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', 'no',
               'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', '']
     data = '\n'.join(inputs)
     arguments = [
@@ -697,7 +649,7 @@ def test_new_mnemonic_eth1_withdrawal_address_param(monkeypatch) -> None:
 
     runner = CliRunner()
     withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
-    inputs = [withdrawal_address, 'english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', '',
+    inputs = [withdrawal_address, 'english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', 'no',
               'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', '']
     data = '\n'.join(inputs)
     arguments = [
@@ -755,7 +707,7 @@ def test_new_mnemonic_execution_address_param(monkeypatch) -> None:
 
     runner = CliRunner()
     withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
-    inputs = [withdrawal_address, 'english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', '',
+    inputs = [withdrawal_address, 'english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', 'no',
               'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', '']
     data = '\n'.join(inputs)
     arguments = [
@@ -817,14 +769,14 @@ def test_pbkdf2_new_mnemonic(monkeypatch) -> None:
         os.mkdir(scrypt_folder_path)
 
     runner = CliRunner()
-
-    inputs = ['english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs',
+    withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
+    inputs = [withdrawal_address, 'english', '1', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', 'no',
               'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', '']
     data = '\n'.join(inputs)
     arguments = [
         '--language', 'english',
         'new-mnemonic',
-        '--withdrawal_address', '',
+        '--withdrawal_address', withdrawal_address,
         '--folder', pbkdf2_folder_path,
         '--pbkdf2',
     ]
@@ -834,7 +786,7 @@ def test_pbkdf2_new_mnemonic(monkeypatch) -> None:
     arguments = [
         '--language', 'english',
         'new-mnemonic',
-        '--withdrawal_address', '',
+        '--withdrawal_address', withdrawal_address,
         '--folder', scrypt_folder_path,
     ]
     result = runner.invoke(cli, arguments, input=data)
@@ -880,187 +832,6 @@ def test_pbkdf2_new_mnemonic(monkeypatch) -> None:
     clean_key_folder(scrypt_folder_path)
 
 
-@pytest.mark.asyncio
-async def test_script_bls_withdrawal() -> None:
-    # Prepare folder
-    my_folder_path = os.path.join(os.getcwd(), 'TESTING_TEMP_FOLDER')
-    clean_key_folder(my_folder_path)
-    if not os.path.exists(my_folder_path):
-        os.mkdir(my_folder_path)
-
-    if os.name == 'nt':  # Windows
-        run_script_cmd = 'bash deposit.sh'
-    else:  # Mac or Linux
-        run_script_cmd = './deposit.sh'
-
-    install_cmd = run_script_cmd + ' install'
-    proc = await asyncio.create_subprocess_shell(
-        install_cmd,
-    )
-    await proc.wait()
-
-    cmd_args = [
-        run_script_cmd,
-        '--language', 'english',
-        '--non_interactive',
-        'new-mnemonic',
-        '--num_validators', '5',
-        '--mnemonic_language', 'english',
-        '--chain', 'mainnet',
-        '--keystore_password', 'MyPasswordIs',
-        '--withdrawal_address', '""',
-        '--folder', my_folder_path,
-    ]
-    proc = await asyncio.create_subprocess_shell(
-        ' '.join(cmd_args),
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-    )
-
-    seed_phrase = ''
-    encoded_phrase = b''
-    parsing = False
-    mnemonic_json_file = os.path.join(os.getcwd(), 'ethstaker_deposit/../ethstaker_deposit/cli/', 'new_mnemonic.json')
-    msg_mnemonic_clipboard_warning = load_text(['msg_mnemonic_clipboard_warning'], mnemonic_json_file, 'new_mnemonic')
-    async for out in proc.stdout:
-        output = out.decode('utf-8').rstrip()
-        if output.startswith(load_text(['msg_mnemonic_presentation'], mnemonic_json_file, 'new_mnemonic')):
-            parsing = True
-        elif output.startswith(load_text(['msg_mnemonic_retype_prompt'], mnemonic_json_file, 'new_mnemonic')):
-            proc.stdin.write(encoded_phrase)
-            proc.stdin.write(b'\n')
-        elif output.startswith(load_text(['msg_confirm_clipboard_clearing'], mnemonic_json_file, 'new_mnemonic')):
-            proc.stdin.write(b'\n')
-        elif parsing:
-            if (
-                not output.startswith('********************')
-                and not output.startswith(msg_mnemonic_clipboard_warning)
-            ):
-                seed_phrase += output
-                if len(seed_phrase) > 0:
-                    encoded_phrase = seed_phrase.encode()
-                    parsing = False
-
-    assert len(seed_phrase) > 0
-
-    await proc.wait()
-
-    # Check files
-    validator_keys_folder_path = os.path.join(my_folder_path, DEFAULT_VALIDATOR_KEYS_FOLDER_NAME)
-    _, _, key_files = next(os.walk(validator_keys_folder_path))
-
-    deposit_file = [key_file for key_file in key_files if key_file.startswith('deposit_data')][0]
-    with open(validator_keys_folder_path + '/' + deposit_file, encoding='utf-8') as f:
-        deposits_dict = json.load(f)
-    for deposit in deposits_dict:
-        withdrawal_credentials = bytes.fromhex(deposit['withdrawal_credentials'])
-        print('withdrawal_credentials', withdrawal_credentials)
-        assert withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX
-
-    _, _, key_files = next(os.walk(validator_keys_folder_path))
-
-    all_uuid = [
-        get_uuid(validator_keys_folder_path + '/' + key_file)
-        for key_file in key_files
-        if key_file.startswith('keystore')
-    ]
-    assert len(set(all_uuid)) == 5
-
-    # Verify file permissions
-    if os.name == 'posix':
-        for file_name in key_files:
-            assert get_permissions(validator_keys_folder_path, file_name) == '0o400'
-
-    # Clean up
-    clean_key_folder(my_folder_path)
-
-
-@pytest.mark.asyncio
-async def test_script_abbreviated_mnemonic() -> None:
-    # Prepare folder
-    my_folder_path = os.path.join(os.getcwd(), 'TESTING_TEMP_FOLDER')
-    clean_key_folder(my_folder_path)
-    if not os.path.exists(my_folder_path):
-        os.mkdir(my_folder_path)
-
-    if os.name == 'nt':  # Windows
-        run_script_cmd = 'bash deposit.sh'
-    else:  # Mac or Linux
-        run_script_cmd = './deposit.sh'
-
-    install_cmd = run_script_cmd + ' install'
-    proc = await asyncio.create_subprocess_shell(
-        install_cmd,
-    )
-    await proc.wait()
-
-    cmd_args = [
-        run_script_cmd,
-        '--language', 'english',
-        '--non_interactive',
-        'new-mnemonic',
-        '--num_validators', '5',
-        '--mnemonic_language', 'english',
-        '--chain', 'mainnet',
-        '--keystore_password', 'MyPasswordIs',
-        '--withdrawal_address', '""',
-        '--folder', my_folder_path,
-    ]
-    proc = await asyncio.create_subprocess_shell(
-        ' '.join(cmd_args),
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-    )
-
-    seed_phrase = ''
-    encoded_phrase = b''
-    parsing = False
-    mnemonic_json_file = os.path.join(os.getcwd(), 'ethstaker_deposit/../ethstaker_deposit/cli/', 'new_mnemonic.json')
-    msg_mnemonic_clipboard_warning = load_text(['msg_mnemonic_clipboard_warning'], mnemonic_json_file, 'new_mnemonic')
-    async for out in proc.stdout:
-        output = out.decode('utf-8').rstrip()
-        if output.startswith(load_text(['msg_mnemonic_presentation'], mnemonic_json_file, 'new_mnemonic')):
-            parsing = True
-        elif output.startswith(load_text(['msg_mnemonic_retype_prompt'], mnemonic_json_file, 'new_mnemonic')):
-            proc.stdin.write(encoded_phrase)
-            proc.stdin.write(b'\n')
-        elif output.startswith(load_text(['msg_confirm_clipboard_clearing'], mnemonic_json_file, 'new_mnemonic')):
-            proc.stdin.write(b'\n')
-        elif parsing:
-            if (
-                not output.startswith('********************')
-                and not output.startswith(msg_mnemonic_clipboard_warning)
-            ):
-                seed_phrase += output
-                if len(seed_phrase) > 0:
-                    abbreviated_mnemonic = ' '.join(abbreviate_words(seed_phrase.split(' ')))
-                    encoded_phrase = abbreviated_mnemonic.encode()
-                    parsing = False
-
-    assert len(seed_phrase) > 0
-
-    await proc.wait()
-
-    # Check files
-    validator_keys_folder_path = os.path.join(my_folder_path, DEFAULT_VALIDATOR_KEYS_FOLDER_NAME)
-    _, _, key_files = next(os.walk(validator_keys_folder_path))
-
-    all_uuid = [
-        get_uuid(validator_keys_folder_path + '/' + key_file)
-        for key_file in key_files
-        if key_file.startswith('keystore')
-    ]
-    assert len(set(all_uuid)) == 5
-
-    # Verify file permissions
-    if os.name == 'posix':
-        for file_name in key_files:
-            assert get_permissions(validator_keys_folder_path, file_name) == '0o400'
-
-    # Clean up
-    clean_key_folder(my_folder_path)
-
-
 def test_new_mnemonic_custom_testnet(monkeypatch) -> None:
     # monkeypatch get_mnemonic
     def mock_get_mnemonic(language, words_path, entropy=None) -> str:
@@ -1084,13 +855,14 @@ def test_new_mnemonic_custom_testnet(monkeypatch) -> None:
     devnet_chain_setting = json.dumps(devnet_chain)
 
     runner = CliRunner()
-    inputs = ['english', 'english', '1', 'MyPasswordIs', 'MyPasswordIs',
+    withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
+    inputs = ['english', withdrawal_address, 'english', '1', 'MyPasswordIs', 'MyPasswordIs', 'no',
               'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', '']
     data = '\n'.join(inputs)
     arguments = [
         '--ignore_connectivity',
         'new-mnemonic',
-        '--withdrawal_address', '',
+        '--withdrawal_address', withdrawal_address,
         '--folder', my_folder_path,
         '--devnet_chain_setting', devnet_chain_setting,
     ]
@@ -1358,7 +1130,7 @@ def test_joc_family_new_mnemonic(monkeypatch, chain_setting) -> None:
 
     runner = CliRunner()
     withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
-    inputs = ['english', '1', 'MyPasswordIs', 'MyPasswordIs', withdrawal_address, withdrawal_address, '',
+    inputs = ['english', '1', 'MyPasswordIs', 'MyPasswordIs', withdrawal_address, withdrawal_address, 'no',
               'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', '']
     data = '\n'.join(inputs)
     arguments = [

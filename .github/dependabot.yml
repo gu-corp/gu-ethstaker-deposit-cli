@@ -6,6 +6,8 @@
 version: 2
 updates:
   - package-ecosystem: "uv"
+    allow:
+      - dependency-type: "all"
     cooldown:
       default-days: 7
     directory: "/"
@@ -19,6 +21,8 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: "docker"
+    allow:
+      - update-types: ["version-update:semver-patch"]
     cooldown:
       default-days: 7
     directory: "/"

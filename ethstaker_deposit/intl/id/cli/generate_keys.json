@@ -1,25 +1,50 @@
 {
-    "generate_keys_arguments_decorator": {
-        "num_validators": {
-            "help": "Jumlah kunci validator yang ingin Anda buat (Anda selalu dapat menghasilkan lebih banyak lagi nanti)",
-            "prompt": "Silakan pilih berapa banyak validator yang ingin Anda jalankan"
-        },
-        "chain": {
-            "help": "Versi Ethereum PoS yang Anda targetkan. Gunakan \"mainnet\" jika Anda menyetorkan ETH",
-            "prompt": "Pilih nama jaringan / rantai (mainnet atau testnet)"
-        },
-        "keystore_password": {
-            "help": "Kata sandi yang akan mengamankan keystore Anda. Anda perlu memasukkan ulang ini untuk mendekripsinya ketika Anda mengatur validator Ethereum PoS Anda. (Disarankan untuk tidak menggunakan argumen ini, dan tunggu CLI menanyakan mnemonik Anda supaya tidak akan muncul dalam riwayat shell Anda.)",
-            "prompt": "Kata sandi yang akan mengamankan keystore Anda. Anda perlu memasukkan ulang ini untuk mendekripsinya ketika Anda mengatur validator Ethereum PoS Anda.",
-            "confirm": "Ulangi untuk konfirmasi",
-            "mismatch": "Kesalahan: dua nilai yang dimasukkan tidak cocok. Silakan ketik ulang."
-        }
+  "generate_keys_arguments_decorator": {
+    "num_validators": {
+      "help": "Jumlah kunci validator yang ingin Anda buat (Anda selalu dapat menghasilkan lebih banyak lagi nanti)",
+      "prompt": "Silakan pilih berapa banyak validator yang ingin Anda jalankan"
     },
-    "generate_keys": {
-        "msg_key_creation": "Membuat kunci Anda.",
-        "msg_creation_success": "\nSukses!\nKunci Anda dapat ditemukan di: ",
-        "msg_pause": "\n\nTekan tombol apa saja.",
-        "err_verify_keystores": "Gagal memverifikasi keystore.",
-        "err_verify_deposit": "Gagal memverifikasi data setoran file JSON."
+    "dynamic": {
+      "chain": {
+        "help": "Versi Ethereum PoS yang Anda targetkan. Gunakan \"mainnet\" jika Anda menyetorkan ETH",
+        "prompt": "Pilih nama jaringan / rantai (mainnet atau testnet)"
+      },
+      "arg_devnet_chain_setting": {
+        "help": "[DEVNET ONLY] Tetapkan nilai GENESIS_FORK_VERSION tertentu. Ini harus berupa string JSON yang berisi objek dengan kunci berikut: network_name, genesis_fork_version, exit_fork_version, genesis_validator_root, multiplier, min_activation_amount dan min_deposit_amount. Isinya harus serupa dengan yang dapat Anda temukan di settings.py. Ini akan menggantikan chain yang dipilih."
+      }
+    },
+    "keystore_password": {
+      "help": "Kata sandi yang akan mengamankan keystore Anda. Anda perlu memasukkan ulang ini untuk mendekripsinya ketika Anda mengatur validator Ethereum PoS Anda. (Disarankan untuk tidak menggunakan argumen ini, dan tunggu CLI menanyakan mnemonik Anda supaya tidak akan muncul dalam riwayat shell Anda.)",
+      "prompt": "Kata sandi yang akan mengamankan keystore Anda. Anda perlu memasukkan ulang ini untuk mendekripsinya ketika Anda mengatur validator Ethereum PoS Anda.",
+      "confirm": "Ulangi untuk konfirmasi",
+      "mismatch": "Kesalahan: dua nilai yang dimasukkan tidak cocok. Silakan ketik ulang."
+    },
+    "folder": {
+      "help": "Jalur folder untuk keystore dan deposit. Secara default mengarah ke `./validator_keys`."
+    },
+    "arg_withdrawal_address": {
+      "help": "Alamat Ethereum yang akan digunakan untuk penarikan. Biasanya diawali dengan '0x' diikuti 40 karakter heksadesimal. Pastikan Anda memiliki kendali penuh atas alamat yang dipilih. Setelah alamat penarikan ditetapkan di chain, alamat tersebut tidak dapat diubah.",
+      "prompt": "Silakan masukkan alamat penarikan. Perhatikan bahwa Anda TIDAK DAPAT mengubahnya setelah ditetapkan di chain.",
+      "confirm": "Masukkan kembali alamat penarikan Anda untuk konfirmasi.",
+      "mismatch": "Kesalahan: kedua nilai yang dimasukkan tidak cocok. Silakan ketik ulang."
+    },
+    "arg_compounding": {
+      "help": "Secara bawaan menghasilkan validator majemuk Type 2 (0x02) dengan saldo efektif maksimum 2048 ETH. Menghasilkan validator penarikan reguler Type 1 (0x01) dengan saldo efektif maksimum 32 ETH jika \"--regular_withdrawal\" dipilih.",
+      "prompt": "Ketik \"yes\" atau terima bawaan jika Anda ingin membuat validator majemuk Type 2 (0x02) dengan saldo efektif maksimum 2048 ETH. Ketik \"no\" jika Anda ingin validator penarikan reguler Type 1 (0x01) dengan saldo efektif maksimum 32 ETH."
+    },
+    "arg_amount": {
+      "help": "Jumlah yang akan didepositkan ke validator ini dalam denominasi ETH. Harus setidaknya 1 ETH dan tidak boleh memiliki presisi lebih dari 1 gwei. Penggunaan opsi ini memerlukan validator majemuk.",
+      "prompt": "Silakan masukkan jumlah yang ingin Anda depositkan ke validator ini. Harus setidaknya {min_deposit} dan tidak boleh memiliki presisi lebih dari 1 gwei. {activation_amount} diperlukan untuk mengaktifkan validator baru"
+    },
+    "arg_pbkdf2": {
+      "help": "Menggunakan fungsi hash pbkdf2, bukan scrypt, untuk file keystore yang dibuat. "
     }
+  },
+  "generate_keys": {
+    "msg_key_creation": "Membuat kunci Anda.",
+    "msg_creation_success": "\nSukses!\nKunci Anda dapat ditemukan di: ",
+    "msg_pause": "\n\nTekan tombol apa saja.",
+    "err_verify_keystores": "Gagal memverifikasi keystore.",
+    "err_verify_deposit": "Gagal memverifikasi data setoran file JSON."
+  }
 }

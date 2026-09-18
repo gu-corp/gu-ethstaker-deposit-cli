@@ -1,0 +1,46 @@
+{
+  "partial_deposit": {
+    "arg_partial_deposit": {
+      "help": "指定されたバリデーターキーストアで署名する、1 ETH 以上の任意の額の部分デポジットを生成します。指定されたバリデーターの残高に追加するか、新しいバリデーターの作成を開始します。"
+    },
+    "arg_partial_deposit_amount": {
+      "help": "このバリデーターに入金する ETH 単位の額。最低1 ETHで、1 gweiを超える精度は指定できません。デフォルトは32 ETHです。"
+    },
+    "arg_partial_deposit_keystore": {
+      "help": "署名して入金する対象のバリデーターに関連付けられたキーストアファイル。",
+      "prompt": "キーストアファイルの場所を入力してください。"
+    },
+    "arg_partial_deposit_keystore_password": {
+      "help": "指定されたキーストアの暗号化に使用するパスワード。注：ニーモニックのパスワードではありません。（この引数は使用せず、CLI からパスワードの入力を求められるまで待つことをお勧めします。使用するとシェル履歴に表示されます。）",
+      "prompt": "指定されたキーストアの暗号化に使用するパスワードを入力してください。",
+      "mismatch": "エラー：指定されたキーストアのパスワードではこのキーストアファイルを復号できませんでした。正しいパスワードを確認して、もう一度お試しください。"
+    },
+    "arg_partial_deposit_output_folder": {
+      "help": "部分デポジットの保存先フォルダーのパス。デフォルトでは `./partial_deposits` を指します。"
+    },
+    "arg_withdrawal_address": {
+      "help": "バリデーターの払い戻しアドレス。",
+      "confirm": "確認のため払い戻しアドレスをもう一度入力してください。",
+      "prompt": "払い戻しアドレスを入力してください。",
+      "mismatch": "エラー：入力された2つのアドレスが一致しません。もう一度入力してください。"
+    },
+    "arg_compounding": {
+      "help": "デフォルトでは、最大有効残高2048 ETHの Type 2（0x02）複利バリデーターを生成します。\"--regular_withdrawal\" を指定した場合は、最大有効残高32 ETHの通常の引き出しの Type 1（0x01）バリデーターを生成します。",
+      "prompt": "Type 2（0x02）複利バリデーターを最大有効残高2048 ETHで生成する場合は \"yes\" と入力するか、デフォルトを受け入れてください。最大有効残高32 ETHの通常の引き出しの Type 1（0x01）バリデーターを生成する場合は \"no\" と入力してください。"
+    },
+    "msg_partial_deposit_creation": "\n部分デポジットを作成しています...",
+    "msg_verify_partial_deposit": "\n部分デポジットを確認しています...",
+    "err_verify_partial_deposit": "\n部分デポジットの確認中に問題が発生しました。\nもう一度お試しください",
+    "msg_creation_success": "\n成功しました！\n部分デポジットファイルは次の場所にあります： ",
+    "msg_pause": "\n\n任意のキーを押してください。",
+    "dynamic": {
+      "arg_partial_deposit_chain": {
+        "help": "バリデーターが稼働している Ethereum PoS チェーンの名前。デフォルトは \"mainnet\" です。",
+        "prompt": "(mainnet または testnet) ネットワーク/チェーン名を選択してください"
+      },
+      "arg_devnet_chain_setting": {
+        "help": "[DEVNET ONLY] 特定の GENESIS_FORK_VERSION 値を設定します。network_name、genesis_fork_version、exit_fork_version、genesis_validator_root、multiplier、min_activation_amount、min_deposit_amount のキーを含むオブジェクトの JSON 文字列を指定してください。settings.py にあるものと同様です。選択したチェーンの設定は上書きされます。"
+      }
+    }
+  }
+}

@@ -36,7 +36,7 @@ The general usage of the CLI is:
 
 Each CLI command has a number of command options that can be provided:
 
-- **`--language`**: The language you wish to use the CLI in. Options: العربية, ελληνικά, English, Français, Bahasa melayu, Italiano, 日本語, 한국어, Português do Brasil, român, 简体中文. Default to English.
+- **`--language`**: The language you wish to use the CLI in. Options: العربية, ελληνικά, English, Deutsch, Français, Bahasa melayu, Italiano, 日本語, 한국어, Português do Brasil, român, Türkçe, 简体中文. Default to English.
 
 - **`--non_interactive`**: Run CLI in non-interactive mode. This will skip all confirmation and internet connectivity checks.
 
@@ -65,6 +65,8 @@ If there is a specific command you would like to understand more, please choose 
 
 - **[test-keystore](test_keystore.md)**: Verify access to the provided keystore file by attempting to decrypt with the provided keystore password.
 
+- **[builder](builder.md)**: For builders only, not validators. Generate builder keys and a builder deposit per [EIP-8282](https://eips.ethereum.org/EIPS/eip-8282). If you want to stake ETH and run a validator, use **[new-mnemonic](new_mnemonic.md)** instead.
+
 ## Canonical Deposit Contract and Launchpad
 
 Ethstaker confirms the canonical Ethereum staking deposit contract addresses and launchpad URLs.
@@ -78,6 +80,11 @@ Depositing to the wrong address **will** lose you your ETH.
 - Ethereum Hoodi testnet
   - Deposit address: [0x00000000219ab540356cBB839Cbe05303d7705Fa](https://hoodi.etherscan.io/address/0x00000000219ab540356cBB839Cbe05303d7705Fa)
   - [Launchpad](https://hoodi.launchpad.ethereum.org/)
+
+- Plataberget testnet
+  - Deposit address: [0x00000000219ab540356cBB839Cbe05303d7705Fa](https://dora.plataberget.ethpandaops.io/address/0x00000000219ab540356cbb839cbe05303d7705fa)
+  - [Validator deposits via Dora](https://dora.plataberget.ethpandaops.io/validators/deposits/submit)
+  - Plataberget is expected to be shut down by the end of 2026.
 
 - Gnosis mainnet
   - Deposit address: [0x0B98057eA310F4d31F2a452B414647007d1645d9](https://gnosis.blockscout.com/address/0x0B98057eA310F4d31F2a452B414647007d1645d9)

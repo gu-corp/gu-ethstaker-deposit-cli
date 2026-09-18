@@ -6,7 +6,8 @@ from click.testing import CliRunner
 from ethstaker_deposit.cli import new_mnemonic
 from ethstaker_deposit.deposit import cli
 from ethstaker_deposit.utils.constants import DEFAULT_VALIDATOR_KEYS_FOLDER_NAME
-from .helpers import clean_key_folder, get_permissions, get_uuid
+from .helpers import clean_key_folder
+from tests.shared_helpers import get_permissions, get_uuid
 
 
 def test_regeneration(monkeypatch) -> None:
@@ -31,14 +32,16 @@ def test_regeneration(monkeypatch) -> None:
         os.mkdir(folder_path_2)
 
     runner = CliRunner()
+    withdrawal_address = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
     # Create index 0 and 1
     my_password = "MyPasswordIs"
-    inputs = ['english', 'english', '2', 'mainnet', my_password, my_password, mock_mnemonic, '']
+    inputs = ['english', withdrawal_address, 'english', '2', 'mainnet', my_password, my_password, 'no',
+              mock_mnemonic, '']
     data = '\n'.join(inputs)
     arguments = [
         '--ignore_connectivity',
         'new-mnemonic',
-        '--withdrawal_address', '',
+        '--withdrawal_address', withdrawal_address,
         '--folder', folder_path_1,
     ]
     result = runner.invoke(cli, arguments, input=data)
@@ -63,13 +66,14 @@ def test_regeneration(monkeypatch) -> None:
     # Create index 1 and 2
     inputs = [
         'english',
+        withdrawal_address,
         mock_mnemonic,
-        '1', '1', '2', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', '']
+        '1', '1', '2', 'mainnet', 'MyPasswordIs', 'MyPasswordIs', 'no', '']
     data = '\n'.join(inputs)
     arguments = [
         '--ignore_connectivity',
         'existing-mnemonic',
-        '--withdrawal_address', '',
+        '--withdrawal_address', withdrawal_address,
         '--folder', folder_path_2,
     ]
     result = runner.invoke(cli, arguments, input=data)

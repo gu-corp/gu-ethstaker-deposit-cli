@@ -1,25 +1,50 @@
 {
-    "generate_keys_arguments_decorator": {
-        "num_validators": {
-            "help": "生成するバリデーターキーの数 (後からいつでも追加で生成できます)",
-            "prompt": "実行したいバリデーターの数を選択してください"
-        },
-        "chain": {
-            "help": "ターゲットとしている Ethereum PoS のバージョン。ETH を入金する場合は \"mainnet\" を使用してください。",
-            "prompt": "(mainnet または testnet) ネットワーク/チェーン名を選択してください"
-        },
-        "keystore_password": {
-            "help": "キーを生成するために使用したニーモニック。 (この引数を使用せずにCLIからニーモニックの入力が求められるのを待つことをお勧めします。そうしないとシェル履歴に表示されます。)",
-            "prompt": "キーストアを保護するパスワード。Ethereum PoS バリデーターをセットアップする際に復号化するためにこれを再入力する必要があります。",
-            "confirm": "確認のために繰り返し入力してください。",
-            "mismatch": "エラー：入力された2つの値が一致しません。もう一度入力してください。"
-        }
+  "generate_keys_arguments_decorator": {
+    "num_validators": {
+      "help": "生成するバリデーターキーの数 (後からいつでも追加で生成できます)",
+      "prompt": "実行したいバリデーターの数を選択してください"
     },
-    "generate_keys": {
-        "msg_key_creation": "キーを作成しています。",
-        "msg_creation_success": "\n成功しました！\nあなたのキーは次の場所で見つけることができます：",
-        "msg_pause": "\n任意のキーを押してください。",
-        "err_verify_keystores": "キーストアの確認に失敗しました。",
-        "err_verify_deposit": "入金データ JSON ファイルの確認に失敗しました。"
+    "dynamic": {
+      "chain": {
+        "help": "ターゲットとしている Ethereum PoS のバージョン。ETH を入金する場合は \"mainnet\" を使用してください。",
+        "prompt": "(mainnet または testnet) ネットワーク/チェーン名を選択してください"
+      },
+      "arg_devnet_chain_setting": {
+        "help": "[DEVNET ONLY] 特定の GENESIS_FORK_VERSION 値を設定します。network_name、genesis_fork_version、exit_fork_version、genesis_validator_root、multiplier、min_activation_amount、min_deposit_amount のキーを含むオブジェクトの JSON 文字列を指定してください。settings.py にあるものと同様です。選択したチェーンの設定は上書きされます。"
+      }
+    },
+    "keystore_password": {
+      "help": "キーを生成するために使用したニーモニック。 (この引数を使用せずにCLIからニーモニックの入力が求められるのを待つことをお勧めします。そうしないとシェル履歴に表示されます。)",
+      "prompt": "キーストアを保護するパスワード。Ethereum PoS バリデーターをセットアップする際に復号化するためにこれを再入力する必要があります。",
+      "confirm": "確認のために繰り返し入力してください。",
+      "mismatch": "エラー：入力された2つの値が一致しません。もう一度入力してください。"
+    },
+    "folder": {
+      "help": "キーストアとデポジットのフォルダーのパス。デフォルトでは `./validator_keys` を指します。"
+    },
+    "arg_withdrawal_address": {
+      "help": "払い戻しに使用する Ethereum アドレス。通常は '0x' に続く40個の16進文字で始まります。ここで選択するアドレスを完全に管理できることを確認してください。チェーン上で払い戻しアドレスを設定すると、変更できません。",
+      "prompt": "払い戻しアドレスを入力してください。チェーン上で設定すると変更できないことに注意してください。",
+      "confirm": "確認のため払い戻しアドレスをもう一度入力してください。",
+      "mismatch": "エラー：入力された2つの値が一致しません。もう一度入力してください。"
+    },
+    "arg_compounding": {
+      "help": "デフォルトでは、最大有効残高2048 ETHの Type 2（0x02）複利バリデーターを生成します。\"--regular_withdrawal\" を指定した場合は、最大有効残高32 ETHの通常の引き出しの Type 1（0x01）バリデーターを生成します。",
+      "prompt": "Type 2（0x02）複利バリデーターを最大有効残高2048 ETHで生成する場合は \"yes\" と入力するか、デフォルトを受け入れてください。最大有効残高32 ETHの通常の引き出しの Type 1（0x01）バリデーターを生成する場合は \"no\" と入力してください。"
+    },
+    "arg_amount": {
+      "help": "これらのバリデーターに入金する ETH 単位の額。最低1 ETHで、1 gweiを超える精度は指定できません。このオプションには複利バリデーターが必要です。",
+      "prompt": "これらのバリデーターに入金する額を入力してください。{min_deposit} 以上で、1 gweiを超える精度は指定できません。新しいバリデーターの有効化には {activation_amount} が必要です"
+    },
+    "arg_pbkdf2": {
+      "help": "生成されたキーストアファイルに scrypt ではなく pbkdf2 ハッシュ関数を使用します。 "
     }
+  },
+  "generate_keys": {
+    "msg_key_creation": "キーを作成しています。",
+    "msg_creation_success": "\n成功しました！\nあなたのキーは次の場所で見つけることができます：",
+    "msg_pause": "\n任意のキーを押してください。",
+    "err_verify_keystores": "キーストアの確認に失敗しました。",
+    "err_verify_deposit": "入金データ JSON ファイルの確認に失敗しました。"
+  }
 }

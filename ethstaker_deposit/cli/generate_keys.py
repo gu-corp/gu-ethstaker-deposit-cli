@@ -17,7 +17,6 @@ from ethstaker_deposit.utils.validation import (
     validate_withdrawal_address,
     validate_yesno,
     validate_deposit_amount,
-    validate_devnet_chain_setting,
 )
 from ethstaker_deposit.utils.constants import (
     DEFAULT_VALIDATOR_KEYS_FOLDER_NAME,
@@ -25,23 +24,21 @@ from ethstaker_deposit.utils.constants import (
 )
 from ethstaker_deposit.utils.ascii_art import RHINO_0
 from ethstaker_deposit.utils.click import (
+    chain_arguments_decorator_list,
     captive_prompt_callback,
-    choice_prompt_func,
     jit_option,
     prompt_if_none,
-    prompt_if_other_is_none,
     prompt_if_other_exists,
     prompt_if_other_value,
+    regular_withdrawal_alias,
 )
 from ethstaker_deposit.utils.intl import (
-    closest_match,
     load_text,
 )
 from ethstaker_deposit.utils.terminal import clear_terminal
+from ethstaker_deposit.utils.symlink import warn_if_output_directory_symlink
 from ethstaker_deposit.settings import (
-    MAINNET,
-    ALL_CHAIN_KEYS,
-    get_chain_setting,
+    MainnetSetting,
     BaseChainSetting,
 )
 
@@ -67,21 +64,7 @@ def generate_keys_arguments_decorator(function: Callable[..., Any]) -> Callable[
             param_decls='--folder',
             type=click.Path(exists=True, file_okay=False, dir_okay=True),
         ),
-        jit_option(
-            callback=captive_prompt_callback(
-                lambda x, _: closest_match(x, ALL_CHAIN_KEYS),
-                choice_prompt_func(
-                    lambda: load_text(['chain', 'prompt'], func='generate_keys_arguments_decorator'),
-                    ALL_CHAIN_KEYS
-                ),
-                prompt_if=prompt_if_other_is_none('devnet_chain_setting'),
-                default=MAINNET,
-            ),
-            default=MAINNET,
-            help=lambda: load_text(['chain', 'help'], func='generate_keys_arguments_decorator'),
-            param_decls='--chain',
-            prompt=False,  # the callback handles the prompt
-        ),
+        *chain_arguments_decorator_list(file_path=__file__),
         jit_option(
             callback=captive_prompt_callback(
                 lambda password, _: validate_password_strength(password),
@@ -98,14 +81,12 @@ def generate_keys_arguments_decorator(function: Callable[..., Any]) -> Callable[
         ),
         jit_option(
             callback=captive_prompt_callback(
-                lambda address, _: validate_withdrawal_address(None, None, address),
+                lambda address, _: validate_withdrawal_address(None, None, address, True),
                 lambda: load_text(['arg_withdrawal_address', 'prompt'], func='generate_keys_arguments_decorator'),
                 lambda: load_text(['arg_withdrawal_address', 'confirm'], func='generate_keys_arguments_decorator'),
                 lambda: load_text(['arg_withdrawal_address', 'mismatch'], func='generate_keys_arguments_decorator'),
-                default="",
                 prompt_if=prompt_if_none,
             ),
-            default="",
             help=lambda: load_text(['arg_withdrawal_address', 'help'], func='generate_keys_arguments_decorator'),
             param_decls=['--withdrawal_address', '--execution_address', '--eth1_withdrawal_address'],
             prompt=False,  # the callback handles the prompt
@@ -114,15 +95,24 @@ def generate_keys_arguments_decorator(function: Callable[..., Any]) -> Callable[
             callback=captive_prompt_callback(
                 lambda value, _: validate_yesno(None, None, value),
                 lambda: load_text(['arg_compounding', 'prompt'], func='generate_keys_arguments_decorator'),
-                default='no',
+                default='yes',
                 prompt_if=prompt_if_other_exists('withdrawal_address'),
             ),
-            default='no',
+            default='yes',
             help=lambda: load_text(['arg_compounding', 'help'], func='generate_keys_arguments_decorator'),
-            param_decls='--compounding/--regular-withdrawal',
+            param_decls='--compounding/--regular_withdrawal',
             prompt=False,  # the callback handles the prompt
             type=bool,
-            show_default='regular-withdrawal',
+            show_default='compounding',
+        ),
+        jit_option(
+            callback=regular_withdrawal_alias,
+            default=None,
+            help='',
+            hidden=True,
+            is_flag=True,
+            flag_value=False,
+            param_decls='--regular-withdrawal',
         ),
         jit_option(
             callback=captive_prompt_callback(
@@ -143,13 +133,6 @@ def generate_keys_arguments_decorator(function: Callable[..., Any]) -> Callable[
             param_decls='--pbkdf2',
             help=lambda: load_text(['arg_pbkdf2', 'help'], func='generate_keys_arguments_decorator'),
         ),
-        jit_option(
-            callback=validate_devnet_chain_setting,
-            default=None,
-            help=lambda: load_text(['arg_devnet_chain_setting', 'help'], func='generate_keys_arguments_decorator'),
-            param_decls='--devnet_chain_setting',
-            is_eager=True,
-        ),
     ]
     for decorator in reversed(decorators):
         function = decorator(function)
@@ -158,12 +141,9 @@ def generate_keys_arguments_decorator(function: Callable[..., Any]) -> Callable[
 
 def get_amount_prompt_from_template() -> str:
     ctx = click.get_current_context(silent=True)
-    chain = ctx.params.get('chain', 'mainnet') if ctx is not None else 'mainnet'
-    devnet_chain_setting = ctx.params.get('devnet_chain_setting', None)
-    if devnet_chain_setting is not None:
-        chain_setting = devnet_chain_setting
-    else:
-        chain_setting = get_chain_setting(chain)
+    chain_setting = ctx.params.get('chain_setting') if ctx is not None else None
+    if chain_setting is None:
+        chain_setting = MainnetSetting
     min_deposit = chain_setting.MIN_DEPOSIT_AMOUNT
     activation_amount = chain_setting.MIN_ACTIVATION_AMOUNT
     template = load_text(['arg_amount', 'prompt'], func='generate_keys_arguments_decorator')
@@ -172,31 +152,26 @@ def get_amount_prompt_from_template() -> str:
 
 def get_default_amount() -> str:
     ctx = click.get_current_context(silent=True)
-    chain = ctx.params.get('chain', 'mainnet') if ctx is not None else 'mainnet'
-    devnet_chain_setting = ctx.params.get('devnet_chain_setting', None)
-    if devnet_chain_setting is not None:
-        chain_setting = devnet_chain_setting
-    else:
-        chain_setting = get_chain_setting(chain)
+    chain_setting = ctx.params.get('chain_setting') if ctx is not None else None
+    if chain_setting is None:
+        chain_setting = MainnetSetting
     return str(chain_setting.MIN_ACTIVATION_AMOUNT)
 
 
 @click.command()
 @click.pass_context
 def generate_keys(ctx: click.Context, validator_start_index: int,
-                  num_validators: int, folder: str, chain: str, keystore_password: str,
+                  num_validators: int, folder: str, chain_setting: BaseChainSetting, keystore_password: str,
                   withdrawal_address: HexAddress, compounding: bool, amount: float, pbkdf2: bool,
-                  devnet_chain_setting: BaseChainSetting | None, **kwargs: Any) -> None:
+                  **kwargs: Any) -> None:
     mnemonic = ctx.obj['mnemonic']
     mnemonic_password = ctx.obj['mnemonic_password']
 
-    # Get chain setting
-    chain_setting = devnet_chain_setting if devnet_chain_setting is not None else get_chain_setting(chain)
-
-    if withdrawal_address is None or not compounding:
+    if not compounding:
         amount = chain_setting.MIN_ACTIVATION_AMOUNT * ETH2GWEI
     amounts = [amount] * num_validators
     folder = os.path.join(folder, DEFAULT_VALIDATOR_KEYS_FOLDER_NAME)
+    warn_if_output_directory_symlink(folder)
 
     amounts = [amount * chain_setting.MULTIPLIER for amount in amounts]
 

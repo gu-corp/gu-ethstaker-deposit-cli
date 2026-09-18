@@ -1,0 +1,46 @@
+{
+  "partial_deposit": {
+    "arg_partial_deposit": {
+      "help": "Génère un dépôt partiel d'un montant d'au moins 1 ETH, qui sera signé par le keystore du validateur fourni. Il sera ajouté au solde du validateur fourni ou lancera la création d'un validateur."
+    },
+    "arg_partial_deposit_amount": {
+      "help": "Le montant à déposer sur ce validateur, en ETH. Il doit être d'au moins 1 ETH et ne peut pas avoir une précision supérieure à 1 gwei. La valeur par défaut est de 32 ETH."
+    },
+    "arg_partial_deposit_keystore": {
+      "help": "Le fichier keystore associé au validateur avec lequel vous souhaitez signer et sur lequel vous souhaitez effectuer un dépôt.",
+      "prompt": "Veuillez saisir l'emplacement de votre fichier keystore."
+    },
+    "arg_partial_deposit_keystore_password": {
+      "help": "Le mot de passe utilisé pour chiffrer le keystore fourni. Remarque : il ne s'agit pas du mot de passe de votre phrase mnémonique. (Il est recommandé de ne pas utiliser cet argument et d'attendre que la CLI vous demande votre mot de passe, car il apparaîtrait sinon dans l'historique de votre shell.)",
+      "prompt": "Saisissez le mot de passe utilisé pour chiffrer le keystore fourni.",
+      "mismatch": "Erreur : le mot de passe du keystore fourni n'a pas permis de déchiffrer ce fichier keystore. Assurez-vous d'utiliser le bon mot de passe et réessayez."
+    },
+    "arg_partial_deposit_output_folder": {
+      "help": "Le chemin du dossier où le dépôt partiel sera enregistré. Pointe par défaut vers `./partial_deposits`."
+    },
+    "arg_withdrawal_address": {
+      "help": "L'adresse de retrait du validateur.",
+      "confirm": "Saisissez à nouveau l'adresse de retrait pour confirmation.",
+      "prompt": "Veuillez saisir l'adresse de retrait.",
+      "mismatch": "Erreur : les deux adresses saisies ne correspondent pas. Veuillez recommencer."
+    },
+    "arg_compounding": {
+      "help": "Génère par défaut des validateurs à capitalisation Type 2 (0x02) avec un solde effectif maximal de 2048 ETH. Génère des validateurs avec retrait classique Type 1 (0x01) avec un solde effectif maximal de 32 ETH si l'option \"--regular_withdrawal\" est choisie.",
+      "prompt": "Saisissez \"yes\" ou acceptez la valeur par défaut si vous souhaitez générer des validateurs à capitalisation Type 2 (0x02) avec un solde effectif maximal de 2048 ETH. Saisissez \"no\" si vous souhaitez des validateurs avec retrait classique Type 1 (0x01) avec un solde effectif maximal de 32 ETH."
+    },
+    "msg_partial_deposit_creation": "\nCréation de votre dépôt partiel...",
+    "msg_verify_partial_deposit": "\nVérification de votre dépôt partiel...",
+    "err_verify_partial_deposit": "\nUn problème est survenu lors de la vérification de votre dépôt partiel.\nVeuillez réessayer",
+    "msg_creation_success": "\nOpération réussie !\nVotre fichier de dépôt partiel se trouve à l'emplacement suivant : ",
+    "msg_pause": "\n\nAppuyez sur une touche.",
+    "dynamic": {
+      "arg_partial_deposit_chain": {
+        "help": "Le nom de la chaîne Ethereum PoS sur laquelle votre validateur fonctionne. \"mainnet\" est la valeur par défaut.",
+        "prompt": "Veuillez choisir le nom du réseau ou de la chaîne (mainnet ou testnet)"
+      },
+      "arg_devnet_chain_setting": {
+        "help": "[DEVNET UNIQUEMENT] Définit une valeur spécifique pour GENESIS_FORK_VERSION. Il doit s'agir d'une chaîne JSON contenant un objet avec les clés suivantes : network_name, genesis_fork_version, exit_fork_version, genesis_validator_root, multiplier, min_activation_amount et min_deposit_amount. Elle doit être similaire à ce que vous pouvez trouver dans settings.py. Cela remplacera toute chaîne sélectionnée."
+      }
+    }
+  }
+}

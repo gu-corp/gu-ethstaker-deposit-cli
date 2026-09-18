@@ -11,6 +11,7 @@ from ethstaker_deposit.utils.validation import (
     normalize_input_list,
     normalize_bls_withdrawal_credentials_to_bytes,
     validate_int_range,
+    validate_builder_deposit_amount,
     validate_deposit_amount,
     validate_bls_withdrawal_credentials,
     validate_withdrawal_address,
@@ -21,6 +22,7 @@ from ethstaker_deposit.utils.validation import (
 )
 from ethstaker_deposit.utils.constants import (
     BLS_WITHDRAWAL_PREFIX,
+    BUILDER_MIN_DEPOSIT,
     ETH2GWEI,
     MAX_DEPOSIT_AMOUNT,
 )
@@ -231,6 +233,43 @@ def test_validate_deposit_amount_returns_gwei(amount: str, expected: int) -> Non
 def test_validate_deposit_amount_rejects_invalid_boundaries(amount: Any) -> None:
     with pytest.raises((ValidationError, TypeError)):
         validate_deposit_amount(amount)
+
+
+@pytest.mark.parametrize(
+    'amount, valid',
+    [
+        ('-1', False),
+        ('0', False),
+        ('0.99999999', False),
+        ('1', True),
+        ('1.000000001', True),
+        ('1.0000000001', False),
+        ('2048', True),
+        # Unlike validator deposits, there is no upper bound for builder deposits.
+        ('2049', True),
+        ('1000000', True),
+        ('a', False),
+        (' ', False),
+    ]
+)
+def test_validate_builder_deposit_amount(amount: str, valid: bool) -> None:
+    if valid:
+        validate_builder_deposit_amount(amount)
+    else:
+        with pytest.raises(ValidationError):
+            validate_builder_deposit_amount(amount)
+
+
+@pytest.mark.parametrize(
+    'amount, expected',
+    [
+        ('1', BUILDER_MIN_DEPOSIT),
+        ('1.000000001', BUILDER_MIN_DEPOSIT + 1),
+        ('2048', 2048 * ETH2GWEI),
+    ],
+)
+def test_validate_builder_deposit_amount_returns_gwei(amount: str, expected: int) -> None:
+    assert validate_builder_deposit_amount(amount) == expected
 
 
 @pytest.mark.parametrize('num', [0, 1, 2**32 - 1, '0', '4294967295'])
@@ -444,3 +483,67 @@ def test_validate_devnet_chain_setting_json() -> None:
     with pytest.raises(ValidationError):
         assert validate_devnet_chain_setting_json(
             json.dumps(invalid_devnet_chain_with_min_deposit_amount_and_wrong_key)) is False
+
+
+@pytest.mark.parametrize('field, value', [
+    ('genesis_fork_version', '2000'),
+    ('genesis_fork_version', 'not-hex'),
+    ('exit_fork_version', '0401700000'),
+    ('exit_fork_version', 4017000),
+    ('genesis_validator_root', '00'),
+    ('genesis_validator_root', 'not-hex'),
+])
+def test_validate_devnet_chain_setting_rejects_invalid_fixed_width_fields(field, value) -> None:
+    setting = {
+        'network_name': 'custom',
+        'genesis_fork_version': '20000910',
+        'exit_fork_version': '04017000',
+        'genesis_validator_root': '21' * 32,
+    }
+    setting[field] = value
+    with pytest.raises(ValidationError):
+        validate_devnet_chain_setting_json(json.dumps(setting))
+
+
+@pytest.mark.parametrize('field, value', [
+    ('network_name', ''),
+    ('network_name', None),
+    ('multiplier', 0),
+    ('multiplier', -1),
+    ('multiplier', 1.5),
+    ('multiplier', True),
+    ('min_activation_amount', 0),
+    ('min_activation_amount', -1),
+    ('min_activation_amount', 'invalid'),
+    ('min_deposit_amount', True),
+])
+def test_validate_devnet_chain_setting_rejects_invalid_values(field, value) -> None:
+    setting = {
+        'network_name': 'custom',
+        'genesis_fork_version': '20000910',
+        'exit_fork_version': '04017000',
+        'genesis_validator_root': '21' * 32,
+    }
+    setting[field] = value
+    with pytest.raises(ValidationError):
+        validate_devnet_chain_setting_json(json.dumps(setting))
+
+
+def test_validate_devnet_chain_setting_allows_missing_root() -> None:
+    setting = {
+        'network_name': 'custom',
+        'genesis_fork_version': '20000910',
+        'exit_fork_version': '04017000',
+    }
+    assert validate_devnet_chain_setting_json(json.dumps(setting)) is True
+
+
+def test_validate_devnet_chain_setting_rejects_oversized_input() -> None:
+    setting = {
+        'network_name': 'custom',
+        'genesis_fork_version': '20000910',
+        'exit_fork_version': '04017000',
+        'padding': 'x' * 400,
+    }
+    with pytest.raises(ValidationError):
+        validate_devnet_chain_setting_json(json.dumps(setting))
