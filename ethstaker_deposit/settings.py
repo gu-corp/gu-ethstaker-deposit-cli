@@ -33,6 +33,8 @@ PLATABERGET = 'plataberget'
 EPHEMERY = 'ephemery'
 GNOSIS = 'gnosis'
 CHIADO = 'chiado'
+JOC = 'joc'
+JOCT = 'joct'
 
 # Mainnet setting
 MainnetSetting = BaseChainSetting(
@@ -86,6 +88,47 @@ ChiadoSetting = BaseChainSetting(
     MULTIPLIER=32,
     MIN_ACTIVATION_AMOUNT=1,
     MIN_DEPOSIT_AMOUNT=0.03125)
+# Japan Open Chain settings
+#
+# Fork versions follow the mainnet/Gnosis convention: the leading byte is the
+# fork number (00 = phase0, 03 = capella) and the trailing bytes are the chain
+# id. Every network in the family must therefore land on a distinct value --
+# deposits are signed against a zero genesis validators root, so the genesis
+# fork version is the only thing binding a deposit signature to one chain.
+# Source of truth is the network's own beacon config; verify with
+# `curl <beacon>/eth/v1/config/spec`.
+#
+# Only long-lived public networks belong here. Ephemeral or internal ones
+# should go through `--devnet_chain_setting`: registering a chain reserves its
+# genesis fork version, and the devnet path then rejects that value -- so
+# registering a network that gets torn down and rebuilt would lock away the
+# one mechanism flexible enough to describe it.
+#
+# GENESIS_VALIDATORS_ROOT is unset because these beacon chains have not reached
+# genesis yet -- the root is the hash of the genesis validator registry, so it
+# cannot be known in advance. It MUST be populated from
+# `/eth/v1/beacon/genesis` once each network genesises: while it is None,
+# `exit-transaction-*` refuses to run, and EIP-7002 execution-layer exits (the
+# WithdrawReceiver path) only work from the Electra fork onwards, so a network
+# that is past capella but not yet past electra would have no exit path at all.
+# `generate-bls-to-execution-change*` is genuinely not needed -- validators here
+# are required to use 0x01 credentials from the deposit onwards -- but it shares
+# the same guard.
+
+# Joc setting -- 0x51 = 81 = chain id
+JocSetting = BaseChainSetting(
+    NETWORK_NAME=JOC,
+    GENESIS_FORK_VERSION=bytes.fromhex('00000051'),
+    EXIT_FORK_VERSION=bytes.fromhex('03000051'),
+    GENESIS_VALIDATORS_ROOT=None)
+# Joc testnet setting -- 0x2761 = 10081 = chain id
+JoctSetting = BaseChainSetting(
+    NETWORK_NAME=JOCT,
+    GENESIS_FORK_VERSION=bytes.fromhex('00002761'),
+    EXIT_FORK_VERSION=bytes.fromhex('03002761'),
+    GENESIS_VALIDATORS_ROOT=None)
+
+
 ALL_CHAINS: dict[str, BaseChainSetting] = {
     MAINNET: MainnetSetting,
     SEPOLIA: SepoliaSetting,
@@ -94,6 +137,8 @@ ALL_CHAINS: dict[str, BaseChainSetting] = {
     EPHEMERY: EphemerySetting,
     GNOSIS: GnosisSetting,
     CHIADO: ChiadoSetting,
+    JOC: JocSetting,
+    JOCT: JoctSetting,
 }
 
 ALL_CHAIN_KEYS: tuple[str, ...] = tuple(ALL_CHAINS.keys())
